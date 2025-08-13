@@ -21,10 +21,8 @@ import android.widget.Button
 import android.widget.ListView
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -56,14 +54,16 @@ class MainActivity : AppCompatActivity() {
     var listAdapter: ArrayAdapter<String> ?= null
 
     fun bind() {
-//        startScanningButton = findViewById(R.id.button1)
-//        stopScanningButton = findViewById(R.id.button2)
-//        deviceListView = findViewById(R.id.listView)
-//        textViewTemp = findViewById(R.id.textView2)
-        startScanningButton = binding.button1
-        stopScanningButton = binding.button2
-        deviceListView = binding.listView
-        textViewTemp = binding.textView2
+        startScanningButton = findViewById(R.id.button1)
+        stopScanningButton = findViewById(R.id.button2)
+        deviceListView = findViewById(R.id.listView)
+        textViewTemp = findViewById(R.id.textView2)
+//        startScanningButton = binding.button1
+//        stopScanningButton = binding.button2
+//        deviceListView = binding.listView
+//        textViewTemp = binding.textView2
+
+        stopScanningButton!!.setEnabled(false)
 
         listAdapter = ArrayAdapter(this, android.R.layout.list_content);
         deviceListView?.setAdapter(listAdapter)
@@ -92,11 +92,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun setStrTextView2(str:String) {
-        binding.textView2.text = str
+        textViewTemp?.setText(str)
     }
 
+    @SuppressLint("MissingPermission")
     fun startScanning(){
-        setStrTextView2("Start Scan!")
 
         if (!bluetoothAdapter!!.isEnabled()) {
             promptEnableBluetooth()
@@ -110,7 +110,7 @@ class MainActivity : AppCompatActivity() {
             listAdapter!!.clear()
             stopScanningButton!!.setEnabled(true)
             startScanningButton!!.setEnabled(false)
-            textViewTemp!!.setText("Поиск устройства")
+            setStrTextView2("Поиск устройства")
 
             val filters: MutableList<ScanFilter?> = ArrayList<ScanFilter?>() //android but can nordic
             val scanFilterBuilder: ScanFilter.Builder = ScanFilter.Builder()
@@ -119,21 +119,7 @@ class MainActivity : AppCompatActivity() {
             val settingsBuilder: ScanSettings.Builder =  ScanSettings.Builder() //android but can nordic
             settingsBuilder.setLegacy(false)
 
-            AsyncTask.execute(Runnable { if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.BLUETOOTH_SCAN
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return@Runnable
-            }
-                bluetoothLeScanner!!.startScan(leScanCallBack) })
+            AsyncTask.execute(Runnable { bluetoothLeScanner!!.stopScan(leScanCallBack) })
         }
     }
 
@@ -191,7 +177,7 @@ class MainActivity : AppCompatActivity() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             result.device?.let {
                 synchronized(it) {
-                    //listShow(result, true, true)
+                    listShow(result, true, true)
                 }
             }
         }
@@ -203,8 +189,12 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    @SuppressLint("MissingPermission")
     fun stopScanning(){
-        setStrTextView2("Stop Scan!")
+        stopScanningButton!!.setEnabled(false)
+        startScanningButton!!.setEnabled(true)
+        setStrTextView2("Поиск остановлен")
+        AsyncTask.execute(Runnable { bluetoothLeScanner!!.stopScan(leScanCallBack) })
 
     }
 
@@ -216,6 +206,55 @@ class MainActivity : AppCompatActivity() {
         bluetoothManager = this@MainActivity.getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager?.adapter
         bluetoothLeScanner = bluetoothAdapter?.getBluetoothLeScanner()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun listShow(res: ScanResult, found_dev: Boolean, connect_dev: Boolean): Boolean {
+        device = res.getDevice()
+        var itemDetails: String?
+        var i: Int
+
+        i = 0
+        while (i < deviceList!!.size) {
+            val addedDeviceDetail = deviceList!!.get(i)!!.getAddress()
+            if (addedDeviceDetail == device!!.getAddress()) {
+                itemDetails =
+                    device!!.getAddress() + " " + rssiStrengthPic(res.getRssi()) + "  " + res.getRssi()
+                itemDetails += if (res.getDevice()
+                        .getName() == null
+                ) "" else "\n       " + res.getDevice().getName()
+
+                Log.d("TAG", "Index:" + i + "/" + deviceList!!.size + " " + itemDetails)
+                listAdapter!!.remove(listAdapter!!.getItem(i))
+                listAdapter!!.insert(itemDetails, i)
+                return true
+            }
+            ++i
+        }
+        itemDetails =
+            device!!.getAddress() + " " + rssiStrengthPic(res.getRssi()) + "  " + res.getRssi()
+        itemDetails += if (res.getDevice().getName() == null) "" else "\n       " + res.getDevice()
+            .getName()
+
+        Log.e("TAG", "NEW:" + i + " " + itemDetails)
+        listAdapter!!.add(itemDetails)
+        deviceList!!.add(device)
+        return false
+    }
+
+    private fun rssiStrengthPic(rs: Int): String {
+        if (rs > -45) {
+            return "▁▃▅▇"
+        }
+        if (rs > -62) {
+            return "▁▃▅"
+        }
+        if (rs > -80) {
+            return "▁▃"
+        }
+        if (rs > -95) {
+            return "▁"
+        } else return ""
     }
 
 }
