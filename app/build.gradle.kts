@@ -54,4 +54,7 @@ dependencies {
 
     implementation(libs.ble.ktx)
 //    implementation(libs.scanner)
+
+    implementation(libs.xxpermissions)
+    implementation(libs.toaster)
 }
