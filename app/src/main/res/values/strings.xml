@@ -2,8 +2,12 @@
     <string name="app_name">TestBluetooth</string>
     <string name="button1">Start scan</string>
     <string name="button2">Stop scan</string>
-    <string name="textview1">Hello</string>
-    <string name="textview2">World</string>
-    <string name="radiobutton1">radiobutton1</string>
-    <string name="radiobutton2">radiobutton2</string>
+    <string name="button3">Connect</string>
+    <string name="button4">Disconnect</string>
+    <string name="textview1">device:</string>
+    <string name="textview2">not connect</string>
+    <string name="textview3">device info</string>
+    <string name="radiobutton1">radio button1</string>
+    <string name="radiobutton2">radio button2</string>
+    <string name="switch1">Scan?</string>
 </resources>
