@@ -111,7 +111,10 @@ class MainActivity : AppCompatActivity() {
 
         XXPermissions.with(this)
             .permission(
-                Permission.BLUETOOTH_SCAN
+                Permission.BLUETOOTH_SCAN,
+                Permission.BLUETOOTH_CONNECT, // android 15
+                Permission.ACCESS_COARSE_LOCATION,
+                Permission.ACCESS_FINE_LOCATION
             )
             .request { _, allGranted ->
                 if (allGranted) {
