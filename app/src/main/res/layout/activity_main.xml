@@ -15,28 +15,28 @@
         android:layout_height="match_parent"
         tools:context=".MainActivity">
 
-        <RadioGroup
-            android:id="@+id/rg"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+<!--        <RadioGroup-->
+<!--            android:id="@+id/rg"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:orientation="horizontal">-->
 
-            <RadioButton
-                android:id="@+id/radioButton1"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:checked="true"
-                android:text="@string/radiobutton1" />
+<!--            <RadioButton-->
+<!--                android:id="@+id/radioButton1"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="match_parent"-->
+<!--                android:layout_weight="1"-->
+<!--                android:checked="true"-->
+<!--                android:text="@string/radiobutton1" />-->
 
-            <RadioButton
-                android:id="@+id/radioButton2"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="@string/radiobutton2" />
+<!--            <RadioButton-->
+<!--                android:id="@+id/radioButton2"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="match_parent"-->
+<!--                android:layout_weight="1"-->
+<!--                android:text="@string/radiobutton2" />-->
 
-        </RadioGroup>
+<!--        </RadioGroup>-->
 
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switch1"

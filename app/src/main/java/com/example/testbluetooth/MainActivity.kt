@@ -3,6 +3,9 @@ package com.example.testbluetooth
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothDevice.BOND_BONDED
+import android.bluetooth.BluetoothDevice.BOND_BONDING
+import android.bluetooth.BluetoothDevice.BOND_NONE
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
@@ -13,7 +16,10 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Intent
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.ArrayAdapter
@@ -31,9 +37,12 @@ import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import com.hjq.toast.Toaster
 import kotlinx.coroutines.launch
-
+import no.nordicsemi.android.ble.error.GattError.GATT_INTERNAL_ERROR
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
+
+    val TAG: String = "MyBleManager"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,11 +83,11 @@ class MainActivity : AppCompatActivity() {
 
     private var deviceListView: ListView ?= null
     var listAdapter: ArrayAdapter<String> ?= null
-    var deviceList: ArrayList<BluetoothDevice?> = ArrayList()
+    var deviceList: ArrayList<BluetoothDevice?> ?= null
 
     private var listServChar: ListView ?= null
     var adapterServChar: ArrayAdapter<String> ?= null
-    var listServCharUUID: ArrayList<String?> = ArrayList()
+    var listServCharUUID: ArrayList<String?> ?= null
 
     fun initParam() {
 //        startScanningButton = findViewById(R.id.button1)
@@ -91,22 +100,24 @@ class MainActivity : AppCompatActivity() {
         textView3 = findViewById(R.id.textView3)
 
         deviceListView = findViewById(R.id.listView1)
-        listAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1);
+        listAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1)
         deviceListView?.setAdapter(listAdapter)
+        deviceList = ArrayList()
 
         listServChar = findViewById(R.id.listView2)
-        adapterServChar = ArrayAdapter(this, android.R.layout.simple_list_item_1);
+        adapterServChar = ArrayAdapter(this, android.R.layout.simple_list_item_1)
         listServChar?.setAdapter(adapterServChar)
+        listServCharUUID = ArrayList()
     }
 
     var device: BluetoothDevice? = null
     fun initListener() {
 
-        scanningSwitch?.setOnCheckedChangeListener({_, isChecked ->
+        scanningSwitch?.setOnCheckedChangeListener { _, isChecked ->
             if (!isChecked) {
                 stopScanning()
             } else startScanning()
-        })
+        }
 
 //        startScanningButton?.setOnClickListener {
 //            startScanning()
@@ -115,22 +126,22 @@ class MainActivity : AppCompatActivity() {
 //            stopScanning()
 //        }
 
-        deviceListView?.setOnItemClickListener({ adapterView, view, position, id ->
+        deviceListView?.setOnItemClickListener { adapterView, view, position, id ->
             stopScanning()
-            device = deviceList.get(position)
+
+            device = deviceList!!.get(position)
 
             scanningSwitch?.setChecked(false)
-            textView1?.text = "device: " + device.toString()
+            textView1?.text = "Устройство: " + device.toString()
             connectingButton!!.setEnabled(true)
-        })
+        }
 
         listServChar?.setOnItemClickListener { adapterView, view, position, id ->
-            val uuid: String = listServCharUUID.get(position)!!
+            val uuid: String = listServCharUUID!!.get(position)!!
             charactRxData(uuid)
         }
 
         connectingButton?.setOnClickListener {
-            scanningSwitch!!.setEnabled(false)
             tryConnectToDevice()
         }
 
@@ -140,7 +151,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun charactRxData(uuid: String) {
-        Log.d("TAG", "UUID : $uuid")
+        Log.d(TAG, "UUID : $uuid")
         textView3?.text = uuid
     }
 
@@ -168,11 +179,8 @@ class MainActivity : AppCompatActivity() {
                         return@request
                     }
 
-
-                    deviceList.clear()
+                    deviceList!!.clear()
                     listAdapter!!.clear()
-//                    stopScanningButton!!.setEnabled(true)
-//                    startScanningButton!!.setEnabled(false)
                     scanningSwitch?.text = "Поиск устройства"
 
                     lifecycleScope.launch { getLeScanner().startScan(leScanCallBack) }
@@ -247,7 +255,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onScanFailed(errorCode: Int) {
             super.onScanFailed(errorCode)
-            Log.e("TAG", "onScanFailed: code:$errorCode")
+            Log.e(TAG, "onScanFailed: code:$errorCode")
         }
     }
 
@@ -260,8 +268,6 @@ class MainActivity : AppCompatActivity() {
             )
             .request { _, allGranted ->
                 if (allGranted) {
-//                    stopScanningButton!!.setEnabled(false)
-//                    startScanningButton!!.setEnabled(true)
                     scanningSwitch?.text = "Поиск остановлен"
 
                     lifecycleScope.launch { getLeScanner().stopScan(leScanCallBack) }
@@ -276,12 +282,12 @@ class MainActivity : AppCompatActivity() {
         var itemDetails: String?
         var i = 0
 
-        while (i < deviceList.size) {
-            val addedDeviceDetail = deviceList.get(i)!!.getAddress()
+        while (i < deviceList!!.size) {
+            val addedDeviceDetail = deviceList!!.get(i)!!.getAddress()
             if (addedDeviceDetail == device!!.getAddress()) {
                 itemDetails = getItemDetails(res)
 
-                Log.d("TAG", "Index:" + i + "/" + deviceList.size + " " + itemDetails)
+                Log.d(TAG, "Index:" + i + "/" + deviceList!!.size + " " + itemDetails)
                 listAdapter!!.remove(listAdapter!!.getItem(i))
                 listAdapter!!.insert(itemDetails, i)
                 return true
@@ -291,9 +297,9 @@ class MainActivity : AppCompatActivity() {
 
         itemDetails = getItemDetails(res)
 
-        Log.e("TAG", "NEW:" + i + " " + itemDetails)
+        Log.e(TAG, "NEW:" + i + " " + itemDetails)
         listAdapter!!.add(itemDetails)
-        deviceList.add(device)
+        deviceList!!.add(device)
         return false
     }
 
@@ -319,7 +325,7 @@ class MainActivity : AppCompatActivity() {
         } else return "    "
     }
 
-    var mBluetoothGatt:BluetoothGatt ?= null
+    var bluetoothGatt:BluetoothGatt ?= null
     @SuppressLint("MissingPermission")
     fun tryConnectToDevice() {
 
@@ -329,19 +335,26 @@ class MainActivity : AppCompatActivity() {
             )
             .request { _, allGranted ->
                 if (allGranted) {
-                    scanningSwitch?.setChecked(false)
-//                    stopScanningButton!!.setEnabled(false)
-//                    startScanningButton!!.setEnabled(false)
-                    textView2?.text = "try connect"
-                    connectingButton!!.setEnabled(false)
+                    adapterServChar!!.clear()
+                    listServCharUUID!!.clear()
 
-                    mBluetoothGatt = device?.connectGatt(this, false, gattCallback);
+                    scanningSwitch?.setChecked(false)
+                    scanningSwitch!!.setEnabled(false)
+                    textView2?.text = "Попытка подключиться"
+                    connectingButton!!.setEnabled(false)
+                    disconnectingButton!!.setEnabled(true)
+
+
+                    bluetoothGatt = device?.connectGatt(this, false, gattCallback, BluetoothDevice.TRANSPORT_LE);
+                    device?.createBond()
                 }
             }
 
     }
 
-    protected val gattCallback = object : BluetoothGattCallback() {
+    val bleHandler : Handler = Handler(Looper.getMainLooper())
+
+    private val gattCallback = object : BluetoothGattCallback() {
         //*********************************************************************************
         @Volatile
         private var isOnCharacteristicReadRunning = false
@@ -353,26 +366,50 @@ class MainActivity : AppCompatActivity() {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothGatt.STATE_CONNECTED) {
-                    Log.w("TAG", "onConnectionStateChangeMy() - Successfully connected to $address")
-                    val discoverServicesOk = gatt.discoverServices()
-                    Log.i("TAG", "onConnectionStateChange: discovered Services: $discoverServicesOk")
 
-                    textView2?.text = "connected"
-                    disconnectingButton!!.setEnabled(true)
+                    val bondstate = device!!.getBondState()
+                    // Обрабатываем bondState
+                    if(bondstate == BOND_NONE || bondstate == BOND_BONDED) {
+
+                        Log.w(TAG, "onConnectionStateChangeMy() - Successfully connected to $address")
+                        val discoverServicesOk = gatt.discoverServices()
+                        Log.i(TAG, "onConnectionStateChange: discovered Services: $discoverServicesOk")
+
+                        lifecycleScope.launch {
+                            textView2?.text = "Успешно подключено"
+                            disconnectingButton!!.setEnabled(true)
+                        }
+
+                    } else if (bondstate == BOND_BONDING) {
+                        Log.i(TAG, "waiting for bonding to complete");
+                    }
 
                 } else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
-                    Log.w("TAG", "onConnectionStateChangeMy() - Successfully disconnected from $address")
+                    Log.w(TAG, "onConnectionStateChangeMy() - Successfully disconnected from $address")
                     gatt.close()
 
-                    textView2?.text = "disconnected"
-                    connectingButton!!.setEnabled(true)
+                    lifecycleScope.launch {
+                        textView2?.text = "Отключено"
+                        scanningSwitch!!.setEnabled(true)
+                        connectingButton!!.setEnabled(true)
+                        disconnectingButton!!.setEnabled(false)
+                    }
                 }
             } else {
-                Log.w("TAG", "onConnectionStateChangeMy: Error $status encountered for $address")
+                Log.w(TAG, "onConnectionStateChangeMy: Error $status encountered for $address")
+                gatt.close()
 
-                textView2?.text = "Error $status connect"
-                connectingButton!!.setEnabled(true)
+                lifecycleScope.launch {
+                    textView2?.text = "Ошибка: $status connect"
+                    connectingButton!!.setEnabled(true)
+                }
+            }
 
+            // Проверяем есть ли ошибки? Если да - отключаемся
+            if (status == GATT_INTERNAL_ERROR) {
+                Log.e(TAG, "Service discovery failed")
+//                disconnect()
+                return
             }
         }
 
@@ -388,7 +425,7 @@ class MainActivity : AppCompatActivity() {
                     val log = StringBuilder("\nService Id: \nUUID: ${service.uuid}")
 
                     adapterServChar?.add("     Service UUID : ${service.uuid}")
-                    listServCharUUID.add(service.uuid.toString())
+                    listServCharUUID!!.add(service.uuid.toString())
 
                     for (j in characteristics.indices) {
                         val characteristic = characteristics[j]
@@ -398,16 +435,27 @@ class MainActivity : AppCompatActivity() {
                         log.append("\n   UUID: $characteristicUuid")
 
                         adapterServChar?.add("Charact UUID : $characteristicUuid")
-                        listServCharUUID.add(service.uuid.toString())
+                        listServCharUUID!!.add(service.uuid.toString())
                     }
-                    Log.d("TAG", "\nonServicesDiscovered: New Service: $log")
+                    Log.d(TAG, "\nonServicesDiscovered: New Service: $log")
                 }
             }
         }
 
     }
 
+    @SuppressLint("MissingPermission")
     fun disconnectDevice() {
+
+        XXPermissions.with(this)
+            .permission(
+                Permission.BLUETOOTH_CONNECT
+            )
+            .request { _, allGranted ->
+                if (allGranted) {
+                    bluetoothGatt!!.disconnect()
+                }
+            }
 
     }
 
